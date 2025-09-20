@@ -28,7 +28,7 @@ class _HomePageState extends State<HomePage> {
               decoration: const InputDecoration(
                 labelText: 'Grupo NA',
               ),
-              value: _selectedGroup,
+              initialValue: _selectedGroup,
               items: naGroups.map((group) {
                 return DropdownMenuItem(
                   value: group,
@@ -75,7 +75,8 @@ class _HomePageState extends State<HomePage> {
               child: ElevatedButton(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Funcionalidade em desenvolvimento')),
+                    const SnackBar(
+                        content: Text('Funcionalidade em desenvolvimento')),
                   );
                 },
                 child: const Text('Gerar Recomendações'),
