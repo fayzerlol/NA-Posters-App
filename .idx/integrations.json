@@ -1,0 +1,6 @@
+{
+  "cloud_run_deploy": {},
+  "gemini_api": {},
+  "google_maps_platform": {},
+  "secrets_manager": {}
+}
