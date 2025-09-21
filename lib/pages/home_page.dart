@@ -156,14 +156,17 @@ class _HomePageState extends State<HomePage> {
                           padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                           textStyle: const TextStyle(fontSize: 18)
                         ),
-                        onPressed: () {
-                          Navigator.of(context).push(MaterialPageRoute(
+                        onPressed: () async {
+                          final result = await Navigator.of(context).push(MaterialPageRoute(
                             builder: (context) => MapPage(
                               center: _currentLocation!,
                               radius: _radius,
                               maxSuggestions: _maxSuggestions.toInt(),
                             ),
                           ));
+                           if (result == true) {
+                            Navigator.of(context).pop(true); // Retorna true para PostersListPage
+                          }
                         },
                         child: const Text('Buscar Locais'),
                       ),

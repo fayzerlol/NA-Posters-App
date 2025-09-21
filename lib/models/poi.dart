@@ -18,9 +18,9 @@ class Poi {
   factory Poi.fromJson(Map<String, dynamic> json) {
     final tags = json['tags'] ?? {};
     return Poi(
-      id: json['id',
-      lat: json['lat'],
-      lon: json['lon'],
+      id: json['id'] as int,
+      lat: json['lat'] as double,
+      lon: json['lon'] as double,
       tags: tags,
       amenity: tags['amenity'] ?? 'unknown',
     );

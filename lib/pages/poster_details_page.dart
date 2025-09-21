@@ -6,6 +6,7 @@ import 'package:na_posters_app/models/poster.dart';
 import 'package:na_posters_app/utils/database_helper.dart';
 import 'package:signature/signature.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:intl/intl.dart'; // Importa para formatação de data
 
 class PosterDetailsPage extends StatefulWidget {
   final Poster poster;
@@ -101,9 +102,14 @@ class _PosterDetailsPageState extends State<PosterDetailsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Localização: (${widget.poster.lat}, ${widget.poster.lon})'),
-            Text('Adicionado em: ${widget.poster.addedDate}'),
+            Text(
+              'Adicionado em: ${DateFormat.yMd().add_jm().format(widget.poster.addedDate)}',
+            ),
             SizedBox(height: 20),
-            Text('Novo Registro de Manutenção', style: Theme.of(context).textTheme.headline6),
+            Text(
+              'Novo Registro de Manutenção',
+              style: Theme.of(context).textTheme.titleLarge, // Alterado de headline6
+            ),
             Form(
               key: _formKey,
               child: Column(
@@ -165,7 +171,10 @@ class _PosterDetailsPageState extends State<PosterDetailsPage> {
               ),
             ),
             SizedBox(height: 20),
-            Text('Histórico de Manutenção', style: Theme.of(context).textTheme.headline6),
+            Text(
+              'Histórico de Manutenção',
+              style: Theme.of(context).textTheme.titleLarge, // Alterado de headline6
+            ),
             Expanded(
               child: FutureBuilder<List<MaintenanceLog>>(
                 future: _logsFuture,
@@ -183,7 +192,9 @@ class _PosterDetailsPageState extends State<PosterDetailsPage> {
                       final log = logs[index];
                       return Card(
                         child: ListTile(
-                          title: Text('${log.status} - ${log.timestamp}'),
+                          title: Text(
+                            '${log.status} - ${DateFormat.yMd().add_jm().format(log.timestamp)}',
+                          ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
