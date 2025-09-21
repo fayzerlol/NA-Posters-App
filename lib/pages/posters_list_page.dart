@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:na_posters_app/models/poster.dart';
 import 'package:na_posters_app/pages/home_page.dart';
 import 'package:na_posters_app/pages/poster_details_page.dart';
@@ -67,6 +68,30 @@ class _PostersListPageState extends State<PostersListPage> {
     });
   }
 
+  IconData _getIconForAmenity(String amenity) {
+    switch (amenity) {
+      case 'place_of_worship':
+        return Icons.church;
+      case 'hospital':
+      case 'clinic':
+      case 'doctors':
+        return Icons.local_hospital;
+      case 'pharmacy':
+        return Icons.medical_services;
+      case 'school':
+      case 'university':
+      case 'college':
+        return Icons.school;
+      case 'community_centre':
+      case 'social_facility':
+        return Icons.people;
+      case 'bus_station':
+        return Icons.directions_bus;
+      default:
+        return Icons.location_pin;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -93,27 +118,44 @@ class _PostersListPageState extends State<PostersListPage> {
             return Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('Nenhum cartaz adicionado ainda.'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'Nenhum cartaz adicionado ainda.\n\nClique no botão "+" para começar.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+            );
           }
           final posters = snapshot.data!;
           return ListView.builder(
+            padding: EdgeInsets.all(8.0),
             itemCount: posters.length,
             itemBuilder: (context, index) {
               final poster = posters[index];
-              return ListTile(
-                title: Text(poster.name),
-                subtitle: Text('Adicionado em: ${poster.addedDate}'),
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => PosterDetailsPage(poster: poster),
-                    ),
-                  );
-                  _refreshPosters();
-                },
-                trailing: IconButton(
-                  icon: Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => _deletePoster(poster.id!),
+              return Card(
+                elevation: 4,
+                margin: EdgeInsets.symmetric(vertical: 8.0),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    child: Icon(_getIconForAmenity(poster.amenity)),
+                  ),
+                  title: Text(poster.name, style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('Adicionado em: ${DateFormat.yMd().format(poster.addedDate)}'),
+                  trailing: IconButton(
+                    icon: Icon(Icons.delete, color: Colors.redAccent),
+                    onPressed: () => _deletePoster(poster.id!),
+                  ),
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => PosterDetailsPage(poster: poster),
+                      ),
+                    );
+                    _refreshPosters();
+                  },
                 ),
               );
             },
@@ -130,6 +172,7 @@ class _PostersListPageState extends State<PostersListPage> {
           }
         },
         child: Icon(Icons.add),
+        tooltip: 'Adicionar Novo Cartaz',
       ),
     );
   }

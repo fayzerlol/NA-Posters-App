@@ -5,7 +5,7 @@ import 'package:na_posters_app/models/poi.dart';
 import 'package:na_posters_app/models/poster.dart';
 import 'package:na_posters_app/services/overpass_service.dart';
 import 'package:na_posters_app/utils/database_helper.dart';
-import 'package:na_posters_app/pages/poster_details_page.dart'; // Import PosterDetailsPage
+import 'package:na_posters_app/pages/poster_details_page.dart';
 
 class MapPage extends StatefulWidget {
   final LatLng center;
@@ -28,7 +28,6 @@ class _MapPageState extends State<MapPage> {
   List<Poi> _suggestedPois = [];
   List<Poster> _savedPosters = [];
   bool _isLoading = true;
-  Poi? _selectedPoi;
 
   @override
   void initState() {
@@ -37,26 +36,26 @@ class _MapPageState extends State<MapPage> {
   }
 
   Future<void> _refreshData() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() { _isLoading = true; });
     try {
       final pois = await _overpassService.getPois(
         widget.center.latitude,
         widget.center.longitude,
-        widget.radius * 1000, // Convert km to meters
+        widget.radius * 1000,
       );
       final savedPosters = await DatabaseHelper.instance.getPosters();
 
+      // Filtra POIs que já foram salvos
+      final savedPoiIds = savedPosters.map((p) => p.poiId).toSet();
+      final filteredPois = pois.where((poi) => !savedPoiIds.contains(poi.id)).toList();
+
       setState(() {
-        _suggestedPois = pois.take(widget.maxSuggestions).toList();
+        _suggestedPois = filteredPois.take(widget.maxSuggestions).toList();
         _savedPosters = savedPosters;
         _isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() { _isLoading = false; });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Falha ao carregar os locais: $e')),
       );
@@ -65,44 +64,29 @@ class _MapPageState extends State<MapPage> {
 
   void _showSavePoiDialog(Poi poi) async {
     final nameController = TextEditingController(text: poi.name);
-    final descriptionController = TextEditingController(text: poi.tags['description'] ?? '');
 
     final result = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Salvar Local'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+          title: Row(
             children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Nome'),
-                autofocus: true,
-              ),
-              TextField(
-                controller: descriptionController,
-                decoration: const InputDecoration(labelText: 'Descrição'),
-              ),
+              Icon(Icons.add_location_alt_outlined, color: Theme.of(context).primaryColor),
+              SizedBox(width: 10),
+              Text('Salvar Local'),
             ],
           ),
+          content: Text('Deseja salvar "${poi.name}" como um novo local de cartaz?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false), // Retorna false se cancelar
+              onPressed: () => Navigator.of(context).pop(false),
               child: const Text('Cancelar'),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () async {
-                final newPoster = Poster(
-                  lat: poi.lat,
-                  lon: poi.lon,
-                  name: nameController.text,
-                  amenity: poi.amenity,
-                  poiId: poi.id,
-                  addedDate: DateTime.now(),
-                );
+                final newPoster = Poster.fromPoi(poi);
                 await DatabaseHelper.instance.addPoster(newPoster);
-                Navigator.of(context).pop(true); // Retorna true se salvar com sucesso
+                Navigator.of(context).pop(true);
               },
               child: const Text('Salvar'),
             ),
@@ -112,54 +96,22 @@ class _MapPageState extends State<MapPage> {
     );
 
     if (result == true) {
-      _refreshData(); // Atualiza os dados se o poster foi salvo
+      _refreshData();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('"${poi.name}" salvo com sucesso!')),
+      );
     }
   }
 
   void _navigateToDetails(Poster poster) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => PosterDetailsPage(poster: poster),
-      ),
+      MaterialPageRoute(builder: (context) => PosterDetailsPage(poster: poster)),
     );
-    _refreshData(); // Refresh data when returning from details page
+    _refreshData();
   }
 
   @override
   Widget build(BuildContext context) {
-    final allMarkers = <Marker>[
-      // Marcadores de POIs sugeridos (Vermelho)
-      ..._suggestedPois.map((poi) {
-        return Marker(
-          width: 80.0,
-          height: 80.0,
-          point: LatLng(poi.lat, poi.lon),
-          child: GestureDetector( // child em vez de builder
-            onTap: () => _showSavePoiDialog(poi),
-            child: Tooltip(
-              message: 'Sugestão: ${poi.name}\nTipo: ${poi.amenity}\nPontuação: ${poi.score}\nToque para salvar',
-              child: const Icon(Icons.location_on, color: Colors.red, size: 40),
-            ),
-          ),
-        );
-      }),
-      // Marcadores de Posters salvos (Azul)
-      ..._savedPosters.map((poster) {
-        return Marker(
-          width: 80.0,
-          height: 80.0,
-          point: LatLng(poster.lat, poster.lon),
-          child: GestureDetector( // child em vez de builder
-            onTap: () => _navigateToDetails(poster),
-            child: Tooltip(
-              message: '${poster.name}\nToque para ver detalhes',
-              child: const Icon(Icons.location_on, color: Colors.blue, size: 40),
-            ),
-          ),
-        );
-      }),
-    ];
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Locais para Colagem'),
@@ -176,15 +128,50 @@ class _MapPageState extends State<MapPage> {
           : FlutterMap(
               options: MapOptions(
                 initialCenter: widget.center,
-                initialZoom: 13.0,
+                initialZoom: 14.0,
               ),
               children: [
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 ),
-                MarkerLayer(markers: allMarkers),
+                MarkerLayer(
+                  markers: [
+                    ..._suggestedPois.map((poi) => _buildPoiMarker(poi)),
+                    ..._savedPosters.map((poster) => _buildPosterMarker(poster)),
+                  ],
+                ),
               ],
             ),
+    );
+  }
+
+  Marker _buildPoiMarker(Poi poi) {
+    return Marker(
+      width: 40.0,
+      height: 40.0,
+      point: LatLng(poi.lat, poi.lon),
+      child: GestureDetector(
+        onTap: () => _showSavePoiDialog(poi),
+        child: Tooltip(
+          message: 'Sugestão: ${poi.name}\nPontuação: ${poi.score}\nToque para salvar',
+          child: Icon(Icons.add_location_outlined, color: Colors.redAccent, size: 40),
+        ),
+      ),
+    );
+  }
+
+  Marker _buildPosterMarker(Poster poster) {
+    return Marker(
+      width: 40.0,
+      height: 40.0,
+      point: LatLng(poster.lat, poster.lon),
+      child: GestureDetector(
+        onTap: () => _navigateToDetails(poster),
+        child: Tooltip(
+          message: 'Salvo: ${poster.name}\nToque para ver detalhes',
+          child: Icon(Icons.location_on, color: Theme.of(context).primaryColor, size: 40),
+        ),
+      ),
     );
   }
 }
