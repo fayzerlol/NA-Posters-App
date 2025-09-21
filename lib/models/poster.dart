@@ -52,6 +52,7 @@ class Poster {
       name: map['name'],
       amenity: map['amenity'],
       addedDate: DateTime.parse(map['added_date']),
+
     );
   }
 }
