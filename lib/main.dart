@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:na_posters_app/screens/home_page.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:na_posters_app/pages/posters_list_page.dart';
 
-Future<void> main() async {
-  await dotenv.load(fileName: ".env");
+void main() {
   runApp(const NaPostersApp());
 }
 
@@ -18,7 +16,7 @@ class NaPostersApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      home: const HomePage(),
+      home: const PostersListPage(),
     );
   }
 }
