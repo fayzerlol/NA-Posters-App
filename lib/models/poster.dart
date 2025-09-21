@@ -31,6 +31,26 @@ class Poster {
     );
   }
 
+  Poster copyWith({
+    int? id,
+    int? poiId,
+    double? lat,
+    double? lon,
+    String? name,
+    String? amenity,
+    DateTime? addedDate,
+  }) {
+    return Poster(
+      id: id ?? this.id,
+      poiId: poiId ?? this.poiId,
+      lat: lat ?? this.lat,
+      lon: lon ?? this.lon,
+      name: name ?? this.name,
+      amenity: amenity ?? this.amenity,
+      addedDate: addedDate ?? this.addedDate,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,

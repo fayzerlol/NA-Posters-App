@@ -268,7 +268,7 @@ class _AddLogFormState extends State<AddLogForm> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           DropdownButtonFormField<String>(
-            value: _selectedStatus,
+            initialValue: _selectedStatus,
             items: ['OK', 'Rasgado', 'Removido'].map((status) {
               return DropdownMenuItem(value: status, child: Text(status));
             }).toList(),

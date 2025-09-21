@@ -54,7 +54,7 @@ class DatabaseHelper {
   Future<Poster> createPoster(Poster poster) async {
     final db = await instance.database;
     final id = await db.insert('posters', poster.toMap());
-    return poster;
+    return poster.copyWith(id: id);
   }
 
   Future<List<Poster>> readAllPosters() async {
@@ -68,7 +68,7 @@ class DatabaseHelper {
   Future<MaintenanceLog> createMaintenanceLog(MaintenanceLog log) async {
     final db = await instance.database;
     final id = await db.insert('maintenance_logs', log.toMap());
-    return log;
+    return log.copyWith(id: id);
   }
 
   Future<List<MaintenanceLog>> readAllMaintenanceLogs(int posterId) async {

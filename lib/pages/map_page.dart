@@ -63,7 +63,6 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _showSavePoiDialog(Poi poi) async {
-    final nameController = TextEditingController(text: poi.name);
 
     final result = await showDialog<bool>(
       context: context,

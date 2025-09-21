@@ -146,7 +146,7 @@ class _HomePageState extends State<HomePage> {
                         point: _currentLocation!,
                         radius: _radius * 1000, // Raio em metros
                         useRadiusInMeter: true,
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.blue.withAlpha(26),
                         borderColor: Colors.blue,
                         borderStrokeWidth: 2,
                       ),
