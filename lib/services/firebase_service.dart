@@ -11,7 +11,17 @@ class FirebaseService {
         print('Nenhum grupo encontrado no Firestore.');
         return [];
       }
-      final groups = snapshot.docs.map((doc) => Group.fromMap(doc.data())).toList();
+      
+      // Corrigido: Mapeia os documentos para incluir o ID do documento.
+      final groups = snapshot.docs.map((doc) {
+        // Pega os dados do documento
+        Map<String, dynamic> data = doc.data();
+        // Adiciona o ID do documento ao mapa
+        data['id'] = doc.id;
+        // Cria a instância de Group a partir do mapa atualizado
+        return Group.fromMap(data);
+      }).toList();
+      
       return groups;
     } catch (e) {
       print('Erro ao buscar grupos: $e');
