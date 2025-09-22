@@ -1,7 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:na_posters_app/helpers/database_helper.dart';
 import 'package:na_posters_app/models/group.dart';
 import 'package:na_posters_app/pages/posters_list_page.dart';
+import 'package:na_posters_app/services/firebase_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class WelcomePage extends StatefulWidget {
@@ -14,6 +15,7 @@ class WelcomePage extends StatefulWidget {
 class _WelcomePageState extends State<WelcomePage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final FirebaseService _firebaseService = FirebaseService();
   Group? _selectedGroup;
   List<Group> _groups = [];
   bool _isLoading = true;
@@ -25,7 +27,10 @@ class _WelcomePageState extends State<WelcomePage> {
   }
 
   Future<void> _loadGroups() async {
-    final groups = await DatabaseHelper.instance.readAllGroups();
+    setState(() {
+      _isLoading = true;
+    });
+    final groups = await _firebaseService.getGroups();
     if (mounted) {
       setState(() {
         _groups = groups;
@@ -34,11 +39,64 @@ class _WelcomePageState extends State<WelcomePage> {
     }
   }
 
+  Future<void> _seedGroups() async {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Verificando e adicionando grupos...')),
+    );
+
+    final List<String> groupNames = [
+      'Barreiro',
+      'Betânia',
+      'Centro',
+      'Cidade Nova',
+      'Concórdia',
+      'Floresta',
+      'Grajaú',
+      'Pampulha',
+      'Sagrada Família',
+      'Serra'
+    ];
+
+    final collectionRef = FirebaseFirestore.instance.collection('groups');
+    final snapshot = await collectionRef.get();
+    final existingGroupNames = snapshot.docs.map((doc) => doc.data()['name'] as String).toSet();
+
+    int addedCount = 0;
+    final batch = FirebaseFirestore.instance.batch();
+
+    for (final name in groupNames) {
+      if (!existingGroupNames.contains(name)) {
+        final newDocRef = collectionRef.doc();
+        batch.set(newDocRef, {'name': name, 'id': newDocRef.id});
+        addedCount++;
+      }
+    }
+
+    if (addedCount > 0) {
+      await batch.commit();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$addedCount grupos novos foram adicionados!')),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Todos os grupos padrão já existem.')),
+        );
+      }
+    }
+
+    // Recarrega os grupos no dropdown
+    await _loadGroups();
+  }
+
   Future<void> _saveAndContinue() async {
     if (_formKey.currentState!.validate()) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('userName', _nameController.text);
-      await prefs.setInt('userGroupId', _selectedGroup!.id!);
+      await prefs.setString('userGroupName', _selectedGroup!.name); // Salva o nome do grupo
 
       if (!mounted) return;
 
@@ -106,7 +164,7 @@ class _WelcomePageState extends State<WelcomePage> {
                       )
                     else
                       const Text(
-                        'Nenhum grupo encontrado. Contate o administrador.',
+                        'Nenhum grupo encontrado no Firestore.',
                         textAlign: TextAlign.center,
                       ),
                     const SizedBox(height: 32),
@@ -118,6 +176,13 @@ class _WelcomePageState extends State<WelcomePage> {
                       ),
                       child: const Text('Continuar'),
                     ),
+                    const SizedBox(height: 16),
+                    // --- BOTÃO TEMPORÁRIO ---
+                    TextButton(
+                      onPressed: _seedGroups,
+                      child: const Text('Adicionar Grupos Padrão'),
+                    ),
+                    // --------------------------
                   ],
                 ),
               ),

@@ -2,10 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:na_posters_app/pages/posters_list_page.dart';
 import 'package:na_posters_app/pages/welcome_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() {
-  // Garantir que os widgets do Flutter estejam inicializados antes de qualquer outra coisa.
+void main() async { // Tornando a função main assíncrona
+  // Garantir que os widgets do Flutter estejam inicializados.
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializar o Firebase.
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const NaPostersApp());
 }
 
@@ -28,9 +36,9 @@ class _NaPostersAppState extends State<NaPostersApp> {
   Future<Widget> _determineInitialPage() async {
     final prefs = await SharedPreferences.getInstance();
     final userName = prefs.getString('userName');
-    final groupId = prefs.getInt('userGroupId');
+    final userGroupName = prefs.getString('userGroupName'); // Verifica o nome do grupo
 
-    if (userName != null && userName.isNotEmpty && groupId != null) {
+    if (userName != null && userName.isNotEmpty && userGroupName != null && userGroupName.isNotEmpty) {
       // Se já temos os dados do usuário, vamos para a lista de cartazes.
       return const PostersListPage();
     } else {

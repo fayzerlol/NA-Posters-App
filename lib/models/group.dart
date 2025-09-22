@@ -1,13 +1,13 @@
 class Group {
-  final int? id;
+  final String id;
   final String name;
 
-  const Group({this.id, required this.name});
+  Group({required this.id, required this.name});
 
-  Group copyWith({int? id, String? name}) {
+  factory Group.fromMap(Map<String, dynamic> map) {
     return Group(
-      id: id ?? this.id,
-      name: name ?? this.name,
+      id: map['id'].toString(), // Garante que o ID seja sempre uma string
+      name: map['name'],
     );
   }
 
@@ -16,12 +16,5 @@ class Group {
       'id': id,
       'name': name,
     };
-  }
-
-  factory Group.fromMap(Map<String, dynamic> map) {
-    return Group(
-      id: map['id'],
-      name: map['name'],
-    );
   }
 }

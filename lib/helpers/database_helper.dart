@@ -1,4 +1,3 @@
-import 'package:na_posters_app/models/group.dart';
 import 'package:na_posters_app/models/maintenance_log.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
@@ -32,15 +31,6 @@ class DatabaseHelper {
     const nullableTextType = 'TEXT';
 
     await db.execute('''
-      CREATE TABLE groups (
-        id $idType,
-        name $textType
-      )
-    ''');
-    
-    await _prepopulateGroups(db);
-
-    await db.execute('''
       CREATE TABLE posters (
         id $idType,
         group_id $integerType,
@@ -51,8 +41,7 @@ class DatabaseHelper {
         amenity $textType,
         added_date $textType,
         description $textType,
-        address $textType,  // Novo campo
-        FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE
+        address $textType
       )
     ''');
 
@@ -71,35 +60,10 @@ class DatabaseHelper {
     ''');
   }
 
-  Future<void> _prepopulateGroups(Database db) async {
-    final List<String> groupNames = [
-      'Barreiro',
-      'Betânia',
-      'Centro',
-      'Cidade Nova',
-      'Concórdia',
-      'Floresta',
-      'Grajaú',
-      'Pampulha',
-      'Sagrada Família',
-      'Serra'
-    ];
-
-    final batch = db.batch();
-    for (final name in groupNames) {
-      batch.insert('groups', {'name': name});
-    }
-    await batch.commit(noResult: true);
-  }
-
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
-      const textType = 'TEXT NOT NULL';
       const integerType = 'INTEGER NOT NULL';
-
-      await db.execute('CREATE TABLE groups (id $idType, name $textType)');
       await db.execute('ALTER TABLE posters ADD COLUMN group_id $integerType');
     }
     if (oldVersion < 3) {
@@ -110,20 +74,6 @@ class DatabaseHelper {
     if (oldVersion < 4) {
       await db.execute("ALTER TABLE posters ADD COLUMN address TEXT NOT NULL DEFAULT ''");
     }
-  }
-
-  Future<Group> createGroup(Group group) async {
-    final db = await instance.database;
-    final id = await db.insert('groups', group.toMap());
-    return group.copyWith(id: id);
-  }
-
-  Future<List<Group>> readAllGroups() async {
-    final db = await instance.database;
-    const orderBy = 'name ASC';
-    final result = await db.query('groups', orderBy: orderBy);
-
-    return result.map((json) => Group.fromMap(json)).toList();
   }
 
   Future<Poster> addPoster(Poster poster) async {
