@@ -1,10 +1,11 @@
 # Flutter
 /build/
-.dart_tool/
-.packages
+/.dart_tool/
+/.packages
 .flutter-plugins
 .flutter-plugins-dependencies
 pubspec.lock
+
 
 # IDE-specific
 .idea/
@@ -13,7 +14,39 @@ pubspec.lock
 *.iws
 
 # Build artifacts
-/web/app-debug.apk
+*.apk
+*.aab
+*.ipa
+*.xcarchive
+
+# Android
+android/app/build/
+android/.gradle/
+android/local.properties
+android/gradle.properties
+android/key.properties
+
+# iOS
+ios/Pods/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
+
+# macOS
+macos/Pods/
+macos/Flutter/GeneratedPluginRegistrant.swift
+
+# Linux
+linux/flutter/ephemeral/
+
+# Windows
+windows/flutter/ephemeral/
+
+# Web
+web/.dart_tool/
+web/build/
 
 # Misc
 *.log
