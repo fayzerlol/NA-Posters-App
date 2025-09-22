@@ -1,102 +1,62 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:na_posters_app/models/poster.dart';
-import 'package:na_posters_app/pages/home_page.dart';
-import 'package:na_posters_app/pages/poster_details_page.dart';
-import 'package:na_posters_app/services/export_service.dart';
 import 'package:na_posters_app/helpers/database_helper.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:na_posters_app/models/poster.dart';
+import 'package:na_posters_app/pages/poster_add_page.dart';
+import 'package:na_posters_app/pages/poster_details_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PostersListPage extends StatefulWidget {
-  const PostersListPage({Key? key}) : super(key: key);
+  const PostersListPage({super.key});
 
   @override
-  _PostersListPageState createState() => _PostersListPageState();
+  State<PostersListPage> createState() => _PostersListPageState();
 }
 
 class _PostersListPageState extends State<PostersListPage> {
   late Future<List<Poster>> _postersFuture;
-  final ExportService _exportService = ExportService();
-  bool _isExporting = false;
+  String? _userGroupId;
+  String _userGroupName = 'Seu Grupo'; // Default value
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _refreshPosters();
+    _loadUserDataAndFetchPosters();
   }
 
-  void _refreshPosters() {
-    setState(() {
-      _postersFuture = DatabaseHelper.instance.getPosters();
-    });
-  }
+  Future<void> _loadUserDataAndFetchPosters() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Fetching the group ID (String) and group name
+    final groupId = prefs.getString('userGroupId');
+    final groupName = prefs.getString('userGroupName') ?? 'Grupo Desconhecido';
 
-  void _deletePoster(int id) async {
-    await DatabaseHelper.instance.deletePoster(id);
-    _refreshPosters();
-  }
-
-  Future<void> _exportData() async {
-    setState(() {
-      _isExporting = true;
-    });
-
-    var status = await Permission.storage.request();
-
-    if (status.isGranted) {
-      final path = await _exportService.exportData();
-      if (path != null) {
-        await Share.shareXFiles([XFile(path)], text: 'Backup de Cartazes de NA');
-      } else {
-        if (!mounted) return;
+    if (groupId == null || groupId.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Nenhum dado para exportar.')),
+          const SnackBar(content: Text('ID do Grupo não encontrado. Por favor, reinicie o app.')),
         );
       }
-    } else if (status.isPermanentlyDenied) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Permissão negada permanentemente. Abra as configurações para permitir o acesso.'),
-        ),
-      );
-      await openAppSettings();
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Permissão de armazenamento negada.')),
-      );
+      return;
     }
 
     if (mounted) {
       setState(() {
-        _isExporting = false;
+        _userGroupId = groupId;
+        _userGroupName = groupName;
+        _postersFuture = DatabaseHelper.instance.getPostersByGroup(groupId);
+        _isLoading = false;
       });
     }
   }
 
-  IconData _getIconForAmenity(String amenity) {
-    switch (amenity) {
-      case 'place_of_worship':
-        return Icons.church;
-      case 'hospital':
-      case 'clinic':
-      case 'doctors':
-        return Icons.local_hospital;
-      case 'pharmacy':
-        return Icons.medical_services;
-      case 'school':
-      case 'university':
-      case 'college':
-        return Icons.school;
-      case 'community_centre':
-      case 'social_facility':
-        return Icons.people;
-      case 'bus_station':
-        return Icons.directions_bus;
-      default:
-        return Icons.location_pin;
+  Future<void> _refreshPosters() async {
+    if (_userGroupId != null) {
+      setState(() {
+        _postersFuture = DatabaseHelper.instance.getPostersByGroup(_userGroupId!);
+      });
     }
   }
 
@@ -104,83 +64,76 @@ class _PostersListPageState extends State<PostersListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cartazes de NA'),
-        actions: [
-          if (_isExporting)
-            const Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: CircularProgressIndicator(color: Colors.white),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: _exportData,
-              tooltip: 'Exportar Dados',
-            ),
-        ],
+        title: Text('Cartazes - $_userGroupName'),
       ),
-      body: FutureBuilder<List<Poster>>(
-        future: _postersFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Nenhum cartaz adicionado ainda.\n\nClique no botão "+" para começar.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-            );
-          }
-          final posters = snapshot.data!;
-          return ListView.builder(
-            padding: const EdgeInsets.all(8.0),
-            itemCount: posters.length,
-            itemBuilder: (context, index) {
-              final poster = posters[index];
-              return Card(
-                elevation: 4,
-                margin: const EdgeInsets.symmetric(vertical: 8.0),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    child: Icon(_getIconForAmenity(poster.amenity)),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _userGroupId == null
+              ? const Center(
+                  child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text(
+                    'Não foi possível carregar os cartazes. ID do grupo não definido.',
+                    textAlign: TextAlign.center,
                   ),
-                  title: Text(poster.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('Adicionado em: ${DateFormat.yMd().format(poster.addedDate)}'),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.redAccent),
-                    onPressed: () => _deletePoster(poster.id!),
+                ))
+              : RefreshIndicator(
+                  onRefresh: _refreshPosters,
+                  child: FutureBuilder<List<Poster>>(
+                    future: _postersFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(child: Text('Nenhum cartaz encontrado para este grupo.'));
+                      }
+                      if (snapshot.hasError) {
+                        return Center(child: Text('Erro: ${snapshot.error}'));
+                      }
+
+                      final posters = snapshot.data!;
+
+                      return ListView.builder(
+                        itemCount: posters.length,
+                        itemBuilder: (context, index) {
+                          final poster = posters[index];
+                          return ListTile(
+                            title: Text(poster.name),
+                            subtitle: Text(poster.address),
+                            onTap: () async {
+                              // Navigate to details and wait for a potential update
+                              final result = await Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => PosterDetailsPage(poster: poster),
+                                ),
+                              );
+
+                              // If a poster was deleted on the details page, refresh the list
+                              if (result == 'deleted') {
+                                _refreshPosters();
+                              }
+                            },
+                          );
+                        },
+                      );
+                    },
                   ),
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => PosterDetailsPage(poster: poster),
-                      ),
-                    );
-                    _refreshPosters();
-                  },
                 ),
-              );
-            },
-          );
-        },
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final result = await Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const HomePage()),
-          );
-          if (result == true) {
-            _refreshPosters();
+          if (_userGroupId != null) {
+            // Wait for the add page to close, then refresh the list
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => AddPosterPage(groupId: _userGroupId!),
+              ),
+            );
+            _refreshPosters(); // Refresh after coming back
           }
         },
         child: const Icon(Icons.add),
-        tooltip: 'Adicionar Novo Cartaz',
+        tooltip: 'Adicionar Cartaz',
       ),
     );
   }

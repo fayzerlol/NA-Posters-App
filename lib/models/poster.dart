@@ -1,8 +1,6 @@
-import 'package:na_posters_app/models/poi.dart';
-
 class Poster {
-  final int? id;
-  final int groupId;
+  final int? id; // ID local do SQflite
+  final String groupId; // ID do grupo do Firestore (String)
   final int poiId;
   final double lat;
   final double lon;
@@ -10,7 +8,7 @@ class Poster {
   final String amenity;
   final DateTime addedDate;
   final String description;
-  final String address; 
+  final String address;
 
   Poster({
     this.id,
@@ -21,27 +19,13 @@ class Poster {
     required this.name,
     required this.amenity,
     required this.addedDate,
-    this.description = "",
-    this.address = "", 
+    required this.description,
+    required this.address,
   });
-
-  factory Poster.fromPoi(Poi poi, int groupId) {
-    return Poster(
-      groupId: groupId,
-      poiId: poi.id,
-      lat: poi.lat,
-      lon: poi.lon,
-      name: poi.name,
-      amenity: poi.amenity,
-      addedDate: DateTime.now(),
-      description: poi.name,
-      address: "", 
-    );
-  }
 
   Poster copyWith({
     int? id,
-    int? groupId,
+    String? groupId,
     int? poiId,
     double? lat,
     double? lon,
@@ -61,7 +45,7 @@ class Poster {
       amenity: amenity ?? this.amenity,
       addedDate: addedDate ?? this.addedDate,
       description: description ?? this.description,
-      address: address ?? this.address, 
+      address: address ?? this.address,
     );
   }
 
@@ -76,22 +60,23 @@ class Poster {
       'amenity': amenity,
       'added_date': addedDate.toIso8601String(),
       'description': description,
-      'address': address, 
+      'address': address,
     };
   }
 
   factory Poster.fromMap(Map<String, dynamic> map) {
     return Poster(
-      id: map['id'],
-      groupId: map['group_id'],
-      poiId: map['poi_id'],
-      lat: map['lat'],
-      lon: map['lon'],
-      name: map['name'],
-      amenity: map['amenity'],
-      addedDate: DateTime.parse(map['added_date']),
-      description: map['description'] ?? '',
-      address: map['address'] ?? '', 
+      id: map['id'] as int?,
+      // The group_id from the database is now a TEXT field
+      groupId: map['group_id'].toString(),
+      poiId: map['poi_id'] as int,
+      lat: map['lat'] as double,
+      lon: map['lon'] as double,
+      name: map['name'] as String,
+      amenity: map['amenity'] as String,
+      addedDate: DateTime.parse(map['added_date'] as String),
+      description: map['description'] as String,
+      address: map['address'] as String,
     );
   }
 }

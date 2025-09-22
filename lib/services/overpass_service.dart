@@ -5,6 +5,8 @@ import 'package:na_posters_app/models/poi.dart';
 
 class OverpassService {
   static const String _overpassUrl = 'https://overpass-api.de/api/interpreter';
+  static const String _nominatimUrl = 'https://nominatim.openstreetmap.org/reverse';
+
 
   // Define a pontuação para cada tipo de POI
   static const Map<String, int> poiScores = {
@@ -36,6 +38,19 @@ class OverpassService {
     'nightclub',
     'police',
   ];
+
+  Future<String> getAddressFromCoordinates(double lat, double lon) async {
+    final response = await http.get(
+      Uri.parse('$_nominatimUrl?format=json&lat=$lat&lon=$lon'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['display_name'] ?? 'Endereço não encontrado';
+    } else {
+      throw Exception('Falha ao obter o endereço: ${response.statusCode}');
+    }
+  }
 
   Future<List<Poi>> getPois(double lat, double lon, double radius) async {
     // Constrói a query dinamicamente, buscando apenas os POIs com pontuação

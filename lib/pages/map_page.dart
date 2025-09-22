@@ -50,7 +50,7 @@ class _MapPageState extends State<MapPage> {
         widget.center.longitude,
         widget.radius * 1000,
       );
-      final savedPosters = await DatabaseHelper.instance.getPostersByGroup(widget.group.id!);
+      final savedPosters = await DatabaseHelper.instance.getPostersByGroup(widget.group.id);
 
       final savedPoiIds = savedPosters.map((p) => p.poiId).toSet();
       final filteredPois = pois.where((poi) => !savedPoiIds.contains(poi.id)).toList();
@@ -114,9 +114,9 @@ class _MapPageState extends State<MapPage> {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (_formKey.currentState!.validate()) {
+                if (_formKey.currentState?.validate() ?? false) {
                   final newPoster = Poster(
-                    groupId: widget.group.id!,
+                    groupId: widget.group.id,
                     poiId: poi.id,
                     lat: poi.lat,
                     lon: poi.lon,

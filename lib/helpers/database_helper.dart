@@ -20,20 +20,26 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 4, onCreate: _createDB, onUpgrade: _onUpgrade);
+    // Incremented version to 5 to handle the schema change
+    return await openDatabase(path, version: 5, onCreate: _createDB, onUpgrade: _onUpgrade);
   }
 
   Future _createDB(Database db, int version) async {
+    await _createTables(db);
+  }
+
+  Future<void> _createTables(Database db) async {
     const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
     const textType = 'TEXT NOT NULL';
     const realType = 'REAL NOT NULL';
     const integerType = 'INTEGER NOT NULL';
     const nullableTextType = 'TEXT';
 
+    // Changed group_id to TEXT NOT NULL
     await db.execute('''
       CREATE TABLE posters (
         id $idType,
-        group_id $integerType,
+        group_id $textType,
         poi_id $integerType,
         lat $realType,
         lon $realType,
@@ -63,8 +69,7 @@ class DatabaseHelper {
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      const integerType = 'INTEGER NOT NULL';
-      await db.execute('ALTER TABLE posters ADD COLUMN group_id $integerType');
+      await db.execute('ALTER TABLE posters ADD COLUMN group_id INTEGER');
     }
     if (oldVersion < 3) {
       await db.execute("ALTER TABLE maintenance_logs ADD COLUMN responsible_name TEXT NOT NULL DEFAULT 'Unknown'");
@@ -74,6 +79,22 @@ class DatabaseHelper {
     if (oldVersion < 4) {
       await db.execute("ALTER TABLE posters ADD COLUMN address TEXT NOT NULL DEFAULT ''");
     }
+    if (oldVersion < 5) {
+      // This migration handles changing poster.group_id from INTEGER to TEXT
+      // To prevent data loss, we create a temporary table, copy data, drop the old table, and rename the new one.
+      await db.execute('ALTER TABLE posters RENAME TO posters_old');
+      await _createTables(db); // Re-create tables with the new schema
+
+      // Copy data from the old table. The old group_id will be cast to TEXT.
+      // These old IDs are no longer valid, but we preserve the poster data.
+      // New posters will have the correct string-based Firestore IDs.
+      await db.execute('''
+        INSERT INTO posters (id, group_id, poi_id, lat, lon, name, amenity, added_date, description, address)
+        SELECT id, CAST(group_id AS TEXT), poi_id, lat, lon, name, amenity, added_date, description, address FROM posters_old
+      ''');
+
+      await db.execute('DROP TABLE posters_old');
+    }
   }
 
   Future<Poster> addPoster(Poster poster) async {
@@ -82,7 +103,8 @@ class DatabaseHelper {
     return poster.copyWith(id: id);
   }
 
-  Future<List<Poster>> getPostersByGroup(int groupId) async {
+  // Changed groupId to String
+  Future<List<Poster>> getPostersByGroup(String groupId) async {
     final db = await instance.database;
     final result = await db.query(
       'posters',

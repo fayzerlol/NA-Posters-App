@@ -36,9 +36,10 @@ class _NaPostersAppState extends State<NaPostersApp> {
   Future<Widget> _determineInitialPage() async {
     final prefs = await SharedPreferences.getInstance();
     final userName = prefs.getString('userName');
-    final userGroupName = prefs.getString('userGroupName'); // Verifica o nome do grupo
+    // Checking for the group ID as a string, which comes from Firestore.
+    final groupId = prefs.getString('userGroupId');
 
-    if (userName != null && userName.isNotEmpty && userGroupName != null && userGroupName.isNotEmpty) {
+    if (userName != null && userName.isNotEmpty && groupId != null && groupId.isNotEmpty) {
       // Se já temos os dados do usuário, vamos para a lista de cartazes.
       return const PostersListPage();
     } else {

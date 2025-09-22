@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:na_posters_app/helpers/database_helper.dart';
 import 'package:na_posters_app/models/group.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
+import 'package:na_posters_app/services/firebase_service.dart';
 import 'map_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -44,7 +44,7 @@ class _HomePageState extends State<HomePage> {
     }
     
     try {
-      final groups = await DatabaseHelper.instance.readAllGroups();
+      final groups = await FirebaseService().getGroups();
       if (!mounted) return;
 
       setState(() {
@@ -122,7 +122,7 @@ class _HomePageState extends State<HomePage> {
   }
   
   void _navigateToMapPage() {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState?.validate() ?? false) {
       Navigator.of(context).push(MaterialPageRoute(
         builder: (context) => MapPage(
           group: _selectedGroup!,
@@ -246,7 +246,7 @@ class _HomePageState extends State<HomePage> {
 
     return DropdownButtonFormField<Group>(
       key: ValueKey(_groups.hashCode),
-      value: _selectedGroup,
+      initialValue: _selectedGroup,
       items: _groups.map((group) {
         return DropdownMenuItem<Group>(
           value: group,

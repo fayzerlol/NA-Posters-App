@@ -19,7 +19,7 @@ class DBService {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, fileName);
     return openDatabase(path, version: 1, onCreate: (db, version) async {
-      // TODO: create tables
+      
     });
   }
 
