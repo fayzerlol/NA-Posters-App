@@ -4,6 +4,7 @@ class MaintenanceLog {
   final DateTime timestamp;
   final String status;
   final String notes;
+  final String responsibleName; // Adicionado
   final String? imagePath;
   final String? signaturePath;
 
@@ -13,6 +14,7 @@ class MaintenanceLog {
     required this.timestamp,
     required this.status,
     required this.notes,
+    required this.responsibleName, // Adicionado
     this.imagePath,
     this.signaturePath,
   });
@@ -23,6 +25,7 @@ class MaintenanceLog {
     DateTime? timestamp,
     String? status,
     String? notes,
+    String? responsibleName, // Adicionado
     String? imagePath,
     String? signaturePath,
   }) {
@@ -32,6 +35,7 @@ class MaintenanceLog {
       timestamp: timestamp ?? this.timestamp,
       status: status ?? this.status,
       notes: notes ?? this.notes,
+      responsibleName: responsibleName ?? this.responsibleName, // Adicionado
       imagePath: imagePath ?? this.imagePath,
       signaturePath: signaturePath ?? this.signaturePath,
     );
@@ -44,6 +48,7 @@ class MaintenanceLog {
       'timestamp': timestamp.millisecondsSinceEpoch,
       'status': status,
       'notes': notes,
+      'responsible_name': responsibleName, // Adicionado
       'image_path': imagePath,
       'signature_path': signaturePath,
     };
@@ -56,6 +61,7 @@ class MaintenanceLog {
       timestamp: DateTime.fromMillisecondsSinceEpoch(map['timestamp']),
       status: map['status'],
       notes: map['notes'],
+      responsibleName: map['responsible_name'], // Adicionado
       imagePath: map['image_path'],
       signaturePath: map['signature_path'],
     );

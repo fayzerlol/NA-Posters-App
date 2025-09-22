@@ -1,14 +1,27 @@
-class NaGroup {
-  final String id;
+class Group {
+  final int? id;
   final String name;
 
-  NaGroup({required this.id, required this.name});
-}
+  const Group({this.id, required this.name});
 
-final List<NaGroup> naGroups = [
-  NaGroup(id: 'sp_barroca_bh', name: 'Só por Hoje – Barroca, BH'),
-  NaGroup(id: 'sp_centro_sp', name: 'Grupo Centro – SP'),
-  NaGroup(id: 'sp_vila_madalena', name: 'Grupo Vila Madalena – SP'),
-  NaGroup(id: 'rj_centro', name: 'Grupo Centro – RJ'),
-  NaGroup(id: 'rs_porto_alegre', name: 'Grupo Porto Alegre – RS'),
-];
+  Group copyWith({int? id, String? name}) {
+    return Group(
+      id: id ?? this.id,
+      name: name ?? this.name,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+    };
+  }
+
+  factory Group.fromMap(Map<String, dynamic> map) {
+    return Group(
+      id: map['id'],
+      name: map['name'],
+    );
+  }
+}

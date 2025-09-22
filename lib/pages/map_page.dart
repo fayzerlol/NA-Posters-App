@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:na_posters_app/models/group.dart';
 import 'package:na_posters_app/models/poi.dart';
 import 'package:na_posters_app/models/poster.dart';
 import 'package:na_posters_app/services/overpass_service.dart';
-import 'package:na_posters_app/utils/database_helper.dart';
+import 'package:na_posters_app/services/routing_service.dart';
+import 'package:na_posters_app/helpers/database_helper.dart';
 import 'package:na_posters_app/pages/poster_details_page.dart';
 
 class MapPage extends StatefulWidget {
+  final Group group;
   final LatLng center;
   final double radius;
   final int maxSuggestions;
 
   const MapPage({
     Key? key,
+    required this.group,
     required this.center,
     required this.radius,
     required this.maxSuggestions,
@@ -25,9 +29,12 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   final OverpassService _overpassService = OverpassService();
+  final RoutingService _routingService = RoutingService();
   List<Poi> _suggestedPois = [];
   List<Poster> _savedPosters = [];
+  List<LatLng> _routePoints = [];
   bool _isLoading = true;
+  bool _isRouting = false;
 
   @override
   void initState() {
@@ -43,9 +50,8 @@ class _MapPageState extends State<MapPage> {
         widget.center.longitude,
         widget.radius * 1000,
       );
-      final savedPosters = await DatabaseHelper.instance.getPosters();
+      final savedPosters = await DatabaseHelper.instance.getPostersByGroup(widget.group.id!);
 
-      // Filtra POIs que já foram salvos
       final savedPoiIds = savedPosters.map((p) => p.poiId).toSet();
       final filteredPois = pois.where((poi) => !savedPoiIds.contains(poi.id)).toList();
 
@@ -63,7 +69,6 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _showSavePoiDialog(Poi poi) async {
-
     final result = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -71,11 +76,11 @@ class _MapPageState extends State<MapPage> {
           title: Row(
             children: [
               Icon(Icons.add_location_alt_outlined, color: Theme.of(context).primaryColor),
-              SizedBox(width: 10),
-              Text('Salvar Local'),
+              const SizedBox(width: 10),
+              const Text('Salvar Local'),
             ],
           ),
-          content: Text('Deseja salvar "${poi.name}" como um novo local de cartaz?'),
+          content: Text('Deseja salvar "${poi.name}" para o grupo ${widget.group.name}?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -83,7 +88,7 @@ class _MapPageState extends State<MapPage> {
             ),
             ElevatedButton(
               onPressed: () async {
-                final newPoster = Poster.fromPoi(poi);
+                final newPoster = Poster.fromPoi(poi, widget.group.id!);
                 await DatabaseHelper.instance.addPoster(newPoster);
                 Navigator.of(context).pop(true);
               },
@@ -109,11 +114,41 @@ class _MapPageState extends State<MapPage> {
     _refreshData();
   }
 
+  Future<void> _calculateRoute() async {
+    if (_savedPosters.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('É necessário ter pelo menos 2 locais salvos para criar uma rota.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isRouting = true;
+      _routePoints = [];
+    });
+
+    try {
+      final points = _savedPosters.map((p) => LatLng(p.lat, p.lon)).toList();
+      final route = await _routingService.getRoute(points);
+      setState(() {
+        _routePoints = route;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Falha ao calcular a rota: $e')),
+      );
+    } finally {
+      setState(() {
+        _isRouting = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Locais para Colagem'),
+        title: Text('Locais para ${widget.group.name}'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -133,6 +168,16 @@ class _MapPageState extends State<MapPage> {
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 ),
+                if (_routePoints.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: _routePoints,
+                        strokeWidth: 4.0,
+                        color: Colors.blue,
+                      ),
+                    ],
+                  ),
                 MarkerLayer(
                   markers: [
                     ..._suggestedPois.map((poi) => _buildPoiMarker(poi)),
@@ -141,6 +186,13 @@ class _MapPageState extends State<MapPage> {
                 ),
               ],
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _calculateRoute,
+        tooltip: 'Calcular Rota',
+        child: _isRouting
+            ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
+            : const Icon(Icons.route),
+      ),
     );
   }
 

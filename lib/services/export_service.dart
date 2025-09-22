@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:archive/archive_io.dart';
-import 'package:na_posters_app/utils/database_helper.dart';
+import 'package:na_posters_app/helpers/database_helper.dart'; // Corrected import path
 import 'package:path_provider/path_provider.dart';
 
 class ExportService {
@@ -10,19 +10,20 @@ class ExportService {
       final db = DatabaseHelper.instance;
       final posters = await db.getPosters();
       if (posters.isEmpty) {
-        return null; // Nada para exportar
+        return null; // Nothing to export
       }
 
       final archive = Archive();
 
-      // Estrutura GeoJSON
+      // GeoJSON structure
       final geoJson = {
         'type': 'FeatureCollection',
         'features': [],
       };
 
       for (var poster in posters) {
-        final logs = await db.getLogsForPoster(poster.id!);
+        // Use the correct method to get logs for a poster
+        final logs = await db.readAllMaintenanceLogs(poster.id!);
         final logEntries = [];
 
         for (var log in logs) {
@@ -41,9 +42,10 @@ class ExportService {
           }
 
           logEntries.add({
-            'timestamp': log.timestamp.toIso8601String(), // Corrigido
+            'timestamp': log.timestamp.toIso8601String(),
             'status': log.status,
             'notes': log.notes,
+            'responsible_name': log.responsibleName, // Add responsible name
             'image': imageFileName,
             'signature': signatureFileName,
           });
@@ -57,31 +59,34 @@ class ExportService {
           },
           'properties': {
             'id': poster.id,
+            'group_id': poster.groupId, // Add group_id
+            'poi_id': poster.poiId,     // Add poi_id
             'name': poster.name,
             'amenity': poster.amenity,
             'added_date': poster.addedDate.toIso8601String(),
+            'description': poster.description, // Add description
             'maintenance_logs': logEntries,
           },
         });
       }
 
-      // Adiciona o arquivo GeoJSON ao ZIP
+      // Add the GeoJSON file to the ZIP
       final geoJsonString = jsonEncode(geoJson);
-      archive.addFile(ArchiveFile('posters.geojson', geoJsonString.length, utf8.encode(geoJsonString)));
+      archive.addFile(ArchiveFile('posters.geojson', utf8.encode(geoJsonString).length, utf8.encode(geoJsonString)));
 
-      // Salva o arquivo ZIP
+      // Save the ZIP file
       final tempDir = await getTemporaryDirectory();
       final zipPath = '${tempDir.path}/na_posters_backup.zip';
       final encoder = ZipFileEncoder();
       encoder.create(zipPath);
       for (var file in archive) {
-        encoder.addArchiveFile(file); // Correção: addArchiveFile em vez de addFile
+        encoder.addArchiveFile(file); // Use addArchiveFile
       }
       encoder.close();
 
       return zipPath;
     } catch (e) {
-      print('Erro ao exportar dados: $e');
+      print('Error exporting data: $e');
       return null;
     }
   }

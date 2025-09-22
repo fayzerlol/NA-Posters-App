@@ -4,7 +4,7 @@ import 'package:na_posters_app/models/poster.dart';
 import 'package:na_posters_app/pages/home_page.dart';
 import 'package:na_posters_app/pages/poster_details_page.dart';
 import 'package:na_posters_app/services/export_service.dart';
-import 'package:na_posters_app/utils/database_helper.dart';
+import 'package:na_posters_app/helpers/database_helper.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -42,7 +42,7 @@ class _PostersListPageState extends State<PostersListPage> {
       _isExporting = true;
     });
 
-    // Solicita permissão de armazenamento
+    // Request storage permission
     var status = await Permission.storage.status;
     if (!status.isGranted) {
       status = await Permission.storage.request();
@@ -51,7 +51,8 @@ class _PostersListPageState extends State<PostersListPage> {
     if (status.isGranted) {
       final path = await _exportService.exportData();
       if (path != null) {
-        Share.shareXFiles([XFile(path)], text: 'Backup de Cartazes de NA');
+        // Corrected the typo from shareFiles to shareXFiles
+        await Share.shareXFiles([XFile(path)], text: 'Backup de Cartazes de NA');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Nenhum dado para exportar.')),
