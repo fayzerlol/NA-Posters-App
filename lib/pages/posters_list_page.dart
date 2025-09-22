@@ -42,31 +42,38 @@ class _PostersListPageState extends State<PostersListPage> {
       _isExporting = true;
     });
 
-    // Request storage permission
-    var status = await Permission.storage.status;
-    if (!status.isGranted) {
-      status = await Permission.storage.request();
-    }
+    var status = await Permission.storage.request();
 
     if (status.isGranted) {
       final path = await _exportService.exportData();
       if (path != null) {
-        // Corrected the typo from shareFiles to shareXFiles
         await Share.shareXFiles([XFile(path)], text: 'Backup de Cartazes de NA');
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Nenhum dado para exportar.')),
+          const SnackBar(content: Text('Nenhum dado para exportar.')),
         );
       }
-    } else {
+    } else if (status.isPermanentlyDenied) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Permissão de armazenamento negada.')),
+        const SnackBar(
+          content: Text('Permissão negada permanentemente. Abra as configurações para permitir o acesso.'),
+        ),
+      );
+      await openAppSettings();
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Permissão de armazenamento negada.')),
       );
     }
 
-    setState(() {
-      _isExporting = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isExporting = false;
+      });
+    }
   }
 
   IconData _getIconForAmenity(String amenity) {
@@ -97,16 +104,16 @@ class _PostersListPageState extends State<PostersListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Cartazes de NA'),
+        title: const Text('Cartazes de NA'),
         actions: [
           if (_isExporting)
-            Padding(
+            const Padding(
               padding: const EdgeInsets.all(8.0),
               child: CircularProgressIndicator(color: Colors.white),
             )
           else
             IconButton(
-              icon: Icon(Icons.share),
+              icon: const Icon(Icons.share),
               onPressed: _exportData,
               tooltip: 'Exportar Dados',
             ),
@@ -116,7 +123,7 @@ class _PostersListPageState extends State<PostersListPage> {
         future: _postersFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return Center(
@@ -132,21 +139,21 @@ class _PostersListPageState extends State<PostersListPage> {
           }
           final posters = snapshot.data!;
           return ListView.builder(
-            padding: EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(8.0),
             itemCount: posters.length,
             itemBuilder: (context, index) {
               final poster = posters[index];
               return Card(
                 elevation: 4,
-                margin: EdgeInsets.symmetric(vertical: 8.0),
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
                 child: ListTile(
                   leading: CircleAvatar(
                     child: Icon(_getIconForAmenity(poster.amenity)),
                   ),
-                  title: Text(poster.name, style: TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text(poster.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text('Adicionado em: ${DateFormat.yMd().format(poster.addedDate)}'),
                   trailing: IconButton(
-                    icon: Icon(Icons.delete, color: Colors.redAccent),
+                    icon: const Icon(Icons.delete, color: Colors.redAccent),
                     onPressed: () => _deletePoster(poster.id!),
                   ),
                   onTap: () async {
@@ -166,13 +173,13 @@ class _PostersListPageState extends State<PostersListPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => HomePage()),
+            MaterialPageRoute(builder: (context) => const HomePage()),
           );
           if (result == true) {
             _refreshPosters();
           }
         },
-        child: Icon(Icons.add),
+        child: const Icon(Icons.add),
         tooltip: 'Adicionar Novo Cartaz',
       ),
     );

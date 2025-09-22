@@ -28,12 +28,10 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // Start both initialization tasks concurrently
     _initializePage();
   }
 
   Future<void> _initializePage() async {
-    // Load groups and location in parallel
     await Future.wait([
       _determinePosition(),
       _loadGroups(),
@@ -41,14 +39,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadGroups() async {
-    // Ensure the loading state is set at the beginning
     if (mounted) {
       setState(() { _loadingGroups = true; });
     }
     
     try {
       final groups = await DatabaseHelper.instance.readAllGroups();
-      if (!mounted) return; // Check if the widget is still in the tree
+      if (!mounted) return;
 
       setState(() {
         _groups = groups;
@@ -124,34 +121,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
   
-  void _showAddGroupDialog() {
-    final nameController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Adicionar Novo Grupo'),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(hintText: 'Nome do Grupo'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.isNotEmpty) {
-                await DatabaseHelper.instance.createGroup(Group(name: nameController.text));
-                Navigator.of(context).pop();
-                _loadGroups(); // Refresh the list of groups
-              }
-            },
-            child: const Text('Salvar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _navigateToMapPage() {
     if (_formKey.currentState!.validate()) {
       Navigator.of(context).push(MaterialPageRoute(
@@ -238,7 +207,6 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     TileLayer(
                       urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      // Fix for the OSM User-Agent warning
                       userAgentPackageName: 'com.example.na_posters_app',
                     ),
                     CircleLayer(
@@ -271,52 +239,30 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (_groups.isEmpty) {
-      return Center(
-        child: Column(
-          children: [
-            const Text('Nenhum grupo encontrado.'),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: _showAddGroupDialog,
-              icon: const Icon(Icons.add), 
-              label: const Text('Criar Grupo'),
-            ),
-          ],
-        ),
+      return const Center(
+        child: Text('Nenhum grupo encontrado. Adicione grupos para começar.'),
       );
     }
 
-    return Row(
-      children: [
-        Expanded(
-          child: DropdownButtonFormField<Group>(
-            // Using a key to reset the dropdown when groups change
-            key: ValueKey(_groups.hashCode),
-            value: _selectedGroup,
-            items: _groups.map((group) {
-              return DropdownMenuItem<Group>(
-                value: group,
-                child: Text(group.name),
-              );
-            }).toList(),
-            onChanged: (Group? newValue) {
-              setState(() {
-                _selectedGroup = newValue;
-              });
-            },
-            decoration: const InputDecoration(
-              labelText: 'Grupo de NA',
-              border: OutlineInputBorder(),
-            ),
-             validator: (value) => value == null ? 'Selecione um grupo' : null,
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: _showAddGroupDialog,
-          tooltip: 'Adicionar Novo Grupo',
-        ),
-      ],
+    return DropdownButtonFormField<Group>(
+      key: ValueKey(_groups.hashCode),
+      value: _selectedGroup,
+      items: _groups.map((group) {
+        return DropdownMenuItem<Group>(
+          value: group,
+          child: Text(group.name),
+        );
+      }).toList(),
+      onChanged: (Group? newValue) {
+        setState(() {
+          _selectedGroup = newValue;
+        });
+      },
+      decoration: const InputDecoration(
+        labelText: 'Grupo de NA',
+        border: OutlineInputBorder(),
+      ),
+       validator: (value) => value == null ? 'Selecione um grupo' : null,
     );
   }
 
@@ -334,7 +280,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              onPressed: _initializePage, // Retry the whole initialization
+              onPressed: _initializePage,
               icon: const Icon(Icons.refresh),
               label: const Text('Tentar Novamente'),
             )
@@ -346,7 +292,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildBottomButton() {
     if (_loadingLocation || _currentLocation == null) {
-      return const SizedBox.shrink(); // Don't show button if there is no location
+      return const SizedBox.shrink();
     }
     return Padding(
       padding: const EdgeInsets.all(16.0),

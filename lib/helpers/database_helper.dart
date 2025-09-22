@@ -37,6 +37,9 @@ class DatabaseHelper {
         name $textType
       )
     ''');
+    
+    // Pre-populate with some initial groups from BH
+    await _prepopulateGroups(db);
 
     await db.execute('''
       CREATE TABLE posters (
@@ -66,6 +69,27 @@ class DatabaseHelper {
         FOREIGN KEY (poster_id) REFERENCES posters (id) ON DELETE CASCADE
       )
     ''');
+  }
+
+  Future<void> _prepopulateGroups(Database db) async {
+    final List<String> groupNames = [
+      'Barreiro',
+      'Betânia',
+      'Centro',
+      'Cidade Nova',
+      'Concórdia',
+      'Floresta',
+      'Grajaú',
+      'Pampulha',
+      'Sagrada Família',
+      'Serra'
+    ];
+
+    final batch = db.batch();
+    for (final name in groupNames) {
+      batch.insert('groups', {'name': name});
+    }
+    await batch.commit(noResult: true);
   }
 
 
