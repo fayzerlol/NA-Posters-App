@@ -21,7 +21,7 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 3, onCreate: _createDB, onUpgrade: _onUpgrade);
+    return await openDatabase(path, version: 4, onCreate: _createDB, onUpgrade: _onUpgrade);
   }
 
   Future _createDB(Database db, int version) async {
@@ -38,7 +38,6 @@ class DatabaseHelper {
       )
     ''');
     
-    // Pre-populate with some initial groups from BH
     await _prepopulateGroups(db);
 
     await db.execute('''
@@ -52,6 +51,7 @@ class DatabaseHelper {
         amenity $textType,
         added_date $textType,
         description $textType,
+        address $textType,  // Novo campo
         FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE
       )
     ''');
@@ -95,7 +95,6 @@ class DatabaseHelper {
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // Migração para v2
       const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
       const textType = 'TEXT NOT NULL';
       const integerType = 'INTEGER NOT NULL';
@@ -104,10 +103,12 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE posters ADD COLUMN group_id $integerType');
     }
     if (oldVersion < 3) {
-      // Migração para v3
       await db.execute("ALTER TABLE maintenance_logs ADD COLUMN responsible_name TEXT NOT NULL DEFAULT 'Unknown'");
       await db.execute('ALTER TABLE maintenance_logs ADD COLUMN image_path TEXT');
       await db.execute('ALTER TABLE maintenance_logs ADD COLUMN signature_path TEXT');
+    }
+    if (oldVersion < 4) {
+      await db.execute("ALTER TABLE posters ADD COLUMN address TEXT NOT NULL DEFAULT ''");
     }
   }
 

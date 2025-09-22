@@ -10,6 +10,7 @@ class Poster {
   final String amenity;
   final DateTime addedDate;
   final String description;
+  final String address; 
 
   Poster({
     this.id,
@@ -21,9 +22,9 @@ class Poster {
     required this.amenity,
     required this.addedDate,
     this.description = "",
+    this.address = "", 
   });
 
-  // Construtor para criar um Poster a partir de um POI
   factory Poster.fromPoi(Poi poi, int groupId) {
     return Poster(
       groupId: groupId,
@@ -34,6 +35,7 @@ class Poster {
       amenity: poi.amenity,
       addedDate: DateTime.now(),
       description: poi.name,
+      address: "", 
     );
   }
 
@@ -47,6 +49,7 @@ class Poster {
     String? amenity,
     DateTime? addedDate,
     String? description,
+    String? address,
   }) {
     return Poster(
       id: id ?? this.id,
@@ -58,6 +61,7 @@ class Poster {
       amenity: amenity ?? this.amenity,
       addedDate: addedDate ?? this.addedDate,
       description: description ?? this.description,
+      address: address ?? this.address, 
     );
   }
 
@@ -72,6 +76,7 @@ class Poster {
       'amenity': amenity,
       'added_date': addedDate.toIso8601String(),
       'description': description,
+      'address': address, 
     };
   }
 
@@ -86,6 +91,7 @@ class Poster {
       amenity: map['amenity'],
       addedDate: DateTime.parse(map['added_date']),
       description: map['description'] ?? '',
+      address: map['address'] ?? '', 
     );
   }
 }

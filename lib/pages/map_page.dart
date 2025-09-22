@@ -69,6 +69,9 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _showSavePoiDialog(Poi poi) async {
+    final _formKey = GlobalKey<FormState>();
+    final _addressController = TextEditingController();
+
     final result = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -80,7 +83,30 @@ class _MapPageState extends State<MapPage> {
               const Text('Salvar Local'),
             ],
           ),
-          content: Text('Deseja salvar "${poi.name}" para o grupo ${widget.group.name}?'),
+          content: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Deseja salvar "${poi.name}" para o grupo ${widget.group.name}?'),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _addressController,
+                  decoration: const InputDecoration(
+                    labelText: 'Endereço',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, insira um endereço';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -88,9 +114,21 @@ class _MapPageState extends State<MapPage> {
             ),
             ElevatedButton(
               onPressed: () async {
-                final newPoster = Poster.fromPoi(poi, widget.group.id!);
-                await DatabaseHelper.instance.addPoster(newPoster);
-                Navigator.of(context).pop(true);
+                if (_formKey.currentState!.validate()) {
+                  final newPoster = Poster(
+                    groupId: widget.group.id!,
+                    poiId: poi.id,
+                    lat: poi.lat,
+                    lon: poi.lon,
+                    name: poi.name,
+                    amenity: poi.amenity,
+                    addedDate: DateTime.now(),
+                    address: _addressController.text,
+                    description: poi.name,
+                  );
+                  await DatabaseHelper.instance.addPoster(newPoster);
+                  Navigator.of(context).pop(true);
+                }
               },
               child: const Text('Salvar'),
             ),
