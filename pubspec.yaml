@@ -1,0 +1,47 @@
+name: na_posters_app
+description: NA Posters Flutter app
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Core
+  sqflite: any
+  path_provider: any
+  http: any
+  path: any
+  shared_preferences: any
+  archive: any
+  permission_handler: any
+
+  # Map & Location
+  flutter_map: any
+  latlong2: any
+  geolocator: any
+  flutter_map_location_marker: any
+
+  # UI & Features
+  image_picker: any
+  signature: any
+  share_plus: any
+
+  # Firebase
+  firebase_core: any
+  firebase_app_check: any
+  firebase_app_installations: any
+  cloud_firestore: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: any
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/

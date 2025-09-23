@@ -1,0 +1,154 @@
+import 'package:na_posters_app/models/maintenance_log.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+
+import '../models/poster.dart';
+
+class DatabaseHelper {
+  static final DatabaseHelper instance = DatabaseHelper._init();
+  static Database? _database;
+
+  DatabaseHelper._init();
+
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB('posters.db');
+    return _database!;
+  }
+
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, filePath);
+
+    // Incremented version to 5 to handle the schema change
+    return await openDatabase(path, version: 5, onCreate: _createDB, onUpgrade: _onUpgrade);
+  }
+
+  Future _createDB(Database db, int version) async {
+    await _createTables(db);
+  }
+
+  Future<void> _createTables(Database db) async {
+    const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
+    const textType = 'TEXT NOT NULL';
+    const realType = 'REAL NOT NULL';
+    const integerType = 'INTEGER NOT NULL';
+    const nullableTextType = 'TEXT';
+
+    // Changed group_id to TEXT NOT NULL
+    await db.execute('''
+      CREATE TABLE posters (
+        id $idType,
+        group_id $textType,
+        poi_id $integerType,
+        lat $realType,
+        lon $realType,
+        name $textType,
+        amenity $textType,
+        added_date $textType,
+        description $textType,
+        address $textType
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE maintenance_logs (
+        id $idType,
+        poster_id $integerType,
+        timestamp $integerType,
+        status $textType,
+        notes $textType,
+        responsible_name $textType,
+        image_path $nullableTextType,
+        signature_path $nullableTextType,
+        FOREIGN KEY (poster_id) REFERENCES posters (id) ON DELETE CASCADE
+      )
+    ''');
+  }
+
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE posters ADD COLUMN group_id INTEGER');
+    }
+    if (oldVersion < 3) {
+      await db.execute("ALTER TABLE maintenance_logs ADD COLUMN responsible_name TEXT NOT NULL DEFAULT 'Unknown'");
+      await db.execute('ALTER TABLE maintenance_logs ADD COLUMN image_path TEXT');
+      await db.execute('ALTER TABLE maintenance_logs ADD COLUMN signature_path TEXT');
+    }
+    if (oldVersion < 4) {
+      await db.execute("ALTER TABLE posters ADD COLUMN address TEXT NOT NULL DEFAULT ''");
+    }
+    if (oldVersion < 5) {
+      // This migration handles changing poster.group_id from INTEGER to TEXT
+      // To prevent data loss, we create a temporary table, copy data, drop the old table, and rename the new one.
+      await db.execute('ALTER TABLE posters RENAME TO posters_old');
+      await _createTables(db); // Re-create tables with the new schema
+
+      // Copy data from the old table. The old group_id will be cast to TEXT.
+      // These old IDs are no longer valid, but we preserve the poster data.
+      // New posters will have the correct string-based Firestore IDs.
+      await db.execute('''
+        INSERT INTO posters (id, group_id, poi_id, lat, lon, name, amenity, added_date, description, address)
+        SELECT id, CAST(group_id AS TEXT), poi_id, lat, lon, name, amenity, added_date, description, address FROM posters_old
+      ''');
+
+      await db.execute('DROP TABLE posters_old');
+    }
+  }
+
+  Future<Poster> addPoster(Poster poster) async {
+    final db = await instance.database;
+    final id = await db.insert('posters', poster.toMap());
+    return poster.copyWith(id: id);
+  }
+
+  // Changed groupId to String
+  Future<List<Poster>> getPostersByGroup(String groupId) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'posters',
+      where: 'group_id = ?',
+      whereArgs: [groupId],
+      orderBy: 'name ASC',
+    );
+
+    return result.map((json) => Poster.fromMap(json)).toList();
+  }
+
+  Future<List<Poster>> getPosters() async {
+    final db = await instance.database;
+    const orderBy = 'name ASC';
+    final result = await db.query('posters', orderBy: orderBy);
+
+    return result.map((json) => Poster.fromMap(json)).toList();
+  }
+
+  Future<int> deletePoster(int id) async {
+    final db = await instance.database;
+    return await db.delete(
+      'posters',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<MaintenanceLog> createMaintenanceLog(MaintenanceLog log) async {
+    final db = await instance.database;
+    final id = await db.insert('maintenance_logs', log.toMap());
+    return log.copyWith(id: id);
+  }
+
+  Future<List<MaintenanceLog>> readAllMaintenanceLogs(int posterId) async {
+    final db = await instance.database;
+    const orderBy = 'timestamp DESC';
+    final result = await db.query(
+      'maintenance_logs',
+      orderBy: orderBy,
+      where: 'poster_id = ?',
+      whereArgs: [posterId],
+    );
+
+    return result.map((json) => MaintenanceLog.fromMap(json)).toList();
+  }
+}
