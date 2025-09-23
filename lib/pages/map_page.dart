@@ -111,12 +111,11 @@ class _MapPageState extends State<MapPage> {
 
   Future<void> _showSavePoiDialog(Poi poi) async {
     final address = await _overpassService.getAddressFromCoordinates(poi.lat, poi.lon);
-    final localContext = context;
-
+    
     if (!mounted) return;
     // ignore: use_build_context_synchronously
     final result = await showDialog<bool>(
-      context: localContext,
+      context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text('Salvar Local Sugerido'),
@@ -165,12 +164,11 @@ class _MapPageState extends State<MapPage> {
     final address = await _overpassService.getAddressFromCoordinates(point.latitude, point.longitude);
     final nameController = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    final localContext = context;
 
     if (!mounted) return null;
     // ignore: use_build_context_synchronously
     return showDialog<Poster>(
-      context: localContext,
+      context: context,
       builder: (context) => AlertDialog(
         title: const Text('Adicionar Novo Cartaz'),
         content: Form(

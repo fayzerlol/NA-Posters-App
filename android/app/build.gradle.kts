@@ -8,6 +8,20 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+import java.util.Properties
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.reader().use { reader ->
+        localProperties.load(reader)
+    }
+}
+
+val flutterVersionCode: String = localProperties.getProperty("flutter.versionCode") ?: "1"
+val flutterVersionName: String = localProperties.getProperty("flutter.versionName") ?: "1.0"
+
+
 android {
     namespace = "com.example.na_posters_app"
     compileSdk = flutter.compileSdkVersion
@@ -29,8 +43,9 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode = flutterVersionCode.toInt()
+        versionName = flutterVersionName
+        manifestPlaceholders["googleMapsApiKey"] = localProperties.getProperty("googleMapsApiKey")
     }
 
     buildTypes {

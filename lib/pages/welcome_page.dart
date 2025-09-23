@@ -26,12 +26,22 @@ class _WelcomePageState extends State<WelcomePage> {
   }
 
   Future<void> _loadGroups() async {
-    final groups = await _firebaseService.getGroups();
-    if (mounted) {
+    try {
+      final groups = await _firebaseService.getGroups();
+      if (mounted) {
+        setState(() {
+          _groups = groups;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _groups = groups;
         _isLoading = false;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Falha ao carregar os grupos: $e')),
+      );
     }
   }
 
