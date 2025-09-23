@@ -14,10 +14,10 @@ class AddMaintenanceLogPage extends StatefulWidget {
   const AddMaintenanceLogPage({super.key, required this.posterId});
 
   @override
-  _AddMaintenanceLogPageState createState() => _AddMaintenanceLogPageState();
+  AddMaintenanceLogPageState createState() => AddMaintenanceLogPageState();
 }
 
-class _AddMaintenanceLogPageState extends State<AddMaintenanceLogPage> {
+class AddMaintenanceLogPageState extends State<AddMaintenanceLogPage> {
   final _formKey = GlobalKey<FormState>();
   final _responsibleNameController = TextEditingController();
   final _notesController = TextEditingController();
@@ -40,6 +40,7 @@ class _AddMaintenanceLogPageState extends State<AddMaintenanceLogPage> {
         _imageFile = pickedFile;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Falha ao capturar imagem: $e')),
       );
@@ -58,6 +59,7 @@ class _AddMaintenanceLogPageState extends State<AddMaintenanceLogPage> {
   Future<void> _saveLog() async {
     if (_formKey.currentState!.validate()) {
       if (_signatureController.isEmpty) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('A assinatura do responsável é obrigatória.')),
         );
@@ -91,16 +93,20 @@ class _AddMaintenanceLogPageState extends State<AddMaintenanceLogPage> {
 
         await DatabaseHelper.instance.createMaintenanceLog(newLog);
 
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Registro de manutenção salvo com sucesso!')),
         );
         Navigator.of(context).pop(true); // Retorna true para indicar sucesso
       } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falha ao salvar o registro: $e')),
         );
       } finally {
-        setState(() { _isSaving = false; });
+        if (mounted) {
+          setState(() { _isSaving = false; });
+        }
       }
     }
   }

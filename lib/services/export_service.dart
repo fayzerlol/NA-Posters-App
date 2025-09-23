@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:archive/archive_io.dart';
+import 'package:flutter/foundation.dart';
 import 'package:na_posters_app/helpers/database_helper.dart'; // Corrected import path
 import 'package:path_provider/path_provider.dart';
 
@@ -86,7 +87,7 @@ class ExportService {
 
       return zipPath;
     } catch (e) {
-      print('Error exporting data: $e');
+      debugPrint('Error exporting data: $e');
       return null;
     }
   }

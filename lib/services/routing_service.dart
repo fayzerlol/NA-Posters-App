@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
 class RoutingService {
@@ -25,7 +26,7 @@ class RoutingService {
     } catch (e) {
       // It's better to rethrow the exception or handle it more gracefully
       // For now, we'll just print it as it was.
-      print('Error getting route: $e');
+      debugPrint('Error getting route: $e');
       rethrow; // Rethrowing the exception is often better for debugging.
     }
 

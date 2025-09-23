@@ -11,10 +11,10 @@ class PosterDetailsPage extends StatefulWidget {
   const PosterDetailsPage({super.key, required this.poster});
 
   @override
-  _PosterDetailsPageState createState() => _PosterDetailsPageState();
+  PosterDetailsPageState createState() => PosterDetailsPageState();
 }
 
-class _PosterDetailsPageState extends State<PosterDetailsPage> {
+class PosterDetailsPageState extends State<PosterDetailsPage> {
   late Future<List<MaintenanceLog>> _logsFuture;
 
   @override
@@ -132,7 +132,7 @@ class _PosterDetailsPageState extends State<PosterDetailsPage> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     // Navegar para a página de detalhes do log (a ser criada)
-                    print('Visualizar detalhes do log ${log.id}');
+                    debugPrint('Visualizar detalhes do log ${log.id}');
                   },
                 ),
               );

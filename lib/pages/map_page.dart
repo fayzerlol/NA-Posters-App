@@ -63,6 +63,7 @@ class _MapPageState extends State<MapPage> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Falha ao carregar os locais: $e')),
       );
@@ -76,6 +77,7 @@ class _MapPageState extends State<MapPage> {
   Future<void> _showSavePoiDialog(Poi poi) async {
     final address = await _overpassService.getAddressFromCoordinates(poi.lat, poi.lon);
 
+    if (!mounted) return;
     final result = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -100,8 +102,13 @@ class _MapPageState extends State<MapPage> {
                     address: address,
                     description: poi.name,
                   );
+                  // Ensure context is still valid after async operation
+                  if (!mounted) return;
+
                   await DatabaseHelper.instance.addPoster(newPoster);
-                  Navigator.of(context).pop(true);
+                  if (!mounted) return;
+                  // Use the context from the State, not the dialog builder
+                  Navigator.of(this.context).pop(true);
               },
               child: const Text('Salvar'),
             ),
@@ -112,18 +119,20 @@ class _MapPageState extends State<MapPage> {
 
     if (result == true) {
       _loadData();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('"${poi.name}" salvo com sucesso!')),
       );
     }
   }
 
-  Future<void> _showAddManualMarkerDialog(LatLng point) async {
+  Future<Poster?> _showAddManualMarkerDialog(LatLng point) async {
     final address = await _overpassService.getAddressFromCoordinates(point.latitude, point.longitude);
     final nameController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
-    final result = await showDialog<Poster>(
+    if (!mounted) return null;
+    return showDialog<Poster>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Adicionar Novo Cartaz'),
@@ -158,7 +167,7 @@ class _MapPageState extends State<MapPage> {
                     description: nameController.text,
                   );
                 final createdPoster = await DatabaseHelper.instance.addPoster(newPoster);
-                Navigator.of(context).pop(createdPoster);
+ Navigator.of(mounted ? context : this.context).pop(createdPoster);
               }
             },
             child: const Text('Salvar'),
@@ -166,22 +175,19 @@ class _MapPageState extends State<MapPage> {
         ],
       ),
     );
-
-    if (result != null) {
-      await _navigateToDetails(result);
-      _loadData();
-    }
   }
 
-  Future<void> _navigateToDetails(Poster poster) async {
-    await Navigator.of(context).push(
+  void _navigateToDetails(Poster poster) {
+    Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => PosterDetailsPage(poster: poster)),
-    );
-    _loadData();
+    ).then((_) {
+      _loadData();
+    });
   }
 
   Future<void> _calculateRoute() async {
     if (_savedPosters.length < 2) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('É necessário ter pelo menos 2 locais salvos para criar uma rota.')),
       );
@@ -202,6 +208,7 @@ class _MapPageState extends State<MapPage> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Falha ao calcular a rota: $e')),
       );
@@ -226,7 +233,13 @@ class _MapPageState extends State<MapPage> {
               options: MapOptions(
                 initialCenter: widget.center,
                 initialZoom: 14.0,
-                onLongPress: (tapPosition, point) => _showAddManualMarkerDialog(point),
+                onLongPress: (tapPosition, point) {
+                  _showAddManualMarkerDialog(point).then((newPoster) {
+                    if (newPoster != null) {
+                      _navigateToDetails(newPoster);
+                    }
+                  });
+                },
               ),
               children: [
                 TileLayer(
