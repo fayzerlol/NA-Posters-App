@@ -4,6 +4,7 @@ import 'package:na_posters_app/pages/welcome_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() async { // Tornando a função main assíncrona
   // Garantir que os widgets do Flutter estejam inicializados.
@@ -53,8 +54,11 @@ class _NaPostersAppState extends State<NaPostersApp> {
     return MaterialApp(
       title: 'NA Posters',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
+        textTheme: GoogleFonts.notoSansTextTheme(
+          Theme.of(context).textTheme,
+        ),
       ),
       // O FutureBuilder vai mostrar uma tela de carregamento enquanto
       // decidimos qual é a página inicial correta.

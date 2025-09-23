@@ -1,6 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:na_posters_app/models/group.dart';
 import 'package:na_posters_app/models/poi.dart';
 import 'package:na_posters_app/models/poster.dart';
@@ -28,14 +28,17 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
+  final Completer<GoogleMapController> _controller = Completer();
   final OverpassService _overpassService = OverpassService();
   final RoutingService _routingService = RoutingService();
+
+  Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
   List<Poi> _suggestedPois = [];
   List<Poster> _savedPosters = [];
-  List<LatLng> _routePoints = [];
+
   bool _isLoading = true;
   bool _isRouting = false;
-  
 
   @override
   void initState() {
@@ -56,30 +59,64 @@ class _MapPageState extends State<MapPage> {
       final savedPoiIds = savedPosters.map((p) => p.poiId).toSet();
       final filteredPois = pois.where((poi) => !savedPoiIds.contains(poi.id)).toList();
 
-      if(mounted){
+      if (mounted) {
         setState(() {
           _suggestedPois = filteredPois.take(widget.maxSuggestions).toList();
           _savedPosters = savedPosters;
+          _updateMarkers();
         });
       }
     } catch (e) {
       if (!mounted) return;
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Falha ao carregar os locais: $e')),
       );
     } finally {
-       if(mounted){
+      if (mounted) {
         setState(() => _isLoading = false);
       }
     }
   }
 
+  void _updateMarkers() {
+    final Set<Marker> markers = {};
+
+    // Marcadores para POIs sugeridos
+    for (final poi in _suggestedPois) {
+      markers.add(Marker(
+        markerId: MarkerId('poi_${poi.id}'),
+        position: LatLng(poi.lat, poi.lon),
+        infoWindow: InfoWindow(title: 'Sugestão: ${poi.name}', snippet: 'Toque para salvar'),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        onTap: () => _showSavePoiDialog(poi),
+      ));
+    }
+
+    // Marcadores para cartazes salvos
+    for (final poster in _savedPosters) {
+      markers.add(Marker(
+        markerId: MarkerId('poster_${poster.id}'),
+        position: LatLng(poster.lat, poster.lon),
+        infoWindow: InfoWindow(title: 'Salvo: ${poster.name}', snippet: 'Toque para ver detalhes'),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        onTap: () => _navigateToDetails(poster),
+      ));
+    }
+
+    setState(() {
+      _markers = markers;
+    });
+  }
+
   Future<void> _showSavePoiDialog(Poi poi) async {
     final address = await _overpassService.getAddressFromCoordinates(poi.lat, poi.lon);
+    final localContext = context;
 
     if (!mounted) return;
+    // ignore: use_build_context_synchronously
     final result = await showDialog<bool>(
-      context: context,
+      context: localContext,
       builder: (context) {
         return AlertDialog(
           title: const Text('Salvar Local Sugerido'),
@@ -91,24 +128,21 @@ class _MapPageState extends State<MapPage> {
             ),
             ElevatedButton(
               onPressed: () async {
-                  final newPoster = Poster(
-                    groupId: widget.group.id,
-                    poiId: poi.id,
-                    lat: poi.lat,
-                    lon: poi.lon,
-                    name: poi.name,
-                    amenity: poi.amenity,
-                    addedDate: DateTime.now(),
-                    address: address,
-                    description: poi.name,
-                  );
-                  // Ensure context is still valid after async operation
-                  if (!mounted) return;
-
-                  await DatabaseHelper.instance.addPoster(newPoster);
-                  if (!mounted) return;
-                  // Use the context from the State, not the dialog builder
-                  Navigator.of(this.context).pop(true);
+                final newPoster = Poster(
+                  groupId: widget.group.id,
+                  poiId: poi.id,
+                  lat: poi.lat,
+                  lon: poi.lon,
+                  name: poi.name,
+                  amenity: poi.amenity,
+                  addedDate: DateTime.now(),
+                  address: address,
+                  description: poi.name,
+                );
+                await DatabaseHelper.instance.addPoster(newPoster);
+                if (!mounted) return;
+                // ignore: use_build_context_synchronously
+                Navigator.of(context).pop(true);
               },
               child: const Text('Salvar'),
             ),
@@ -118,22 +152,25 @@ class _MapPageState extends State<MapPage> {
     );
 
     if (result == true) {
-      _loadData();
+      _loadData(); // Recarrega os dados e atualiza os marcadores
       if (!mounted) return;
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('"${poi.name}" salvo com sucesso!')),
       );
     }
   }
 
-  Future<Poster?> _showAddManualMarkerDialog(LatLng point) async {
+    Future<Poster?> _showAddManualMarkerDialog(LatLng point) async {
     final address = await _overpassService.getAddressFromCoordinates(point.latitude, point.longitude);
     final nameController = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    final localContext = context;
 
     if (!mounted) return null;
+    // ignore: use_build_context_synchronously
     return showDialog<Poster>(
-      context: context,
+      context: localContext,
       builder: (context) => AlertDialog(
         title: const Text('Adicionar Novo Cartaz'),
         content: Form(
@@ -166,8 +203,9 @@ class _MapPageState extends State<MapPage> {
                     address: address,
                     description: nameController.text,
                   );
-                final createdPoster = await DatabaseHelper.instance.addPoster(newPoster);
- Navigator.of(mounted ? context : this.context).pop(createdPoster);
+                 final createdPoster = await DatabaseHelper.instance.addPoster(newPoster);
+                 // ignore: use_build_context_synchronously
+                 if (mounted) Navigator.of(context).pop(createdPoster);
               }
             },
             child: const Text('Salvar'),
@@ -177,17 +215,19 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
+
   void _navigateToDetails(Poster poster) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => PosterDetailsPage(poster: poster)),
     ).then((_) {
-      _loadData();
+      _loadData(); // Recarrega os dados ao voltar da tela de detalhes
     });
   }
 
   Future<void> _calculateRoute() async {
     if (_savedPosters.length < 2) {
       if (!mounted) return;
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('É necessário ter pelo menos 2 locais salvos para criar uma rota.')),
       );
@@ -196,24 +236,31 @@ class _MapPageState extends State<MapPage> {
 
     setState(() {
       _isRouting = true;
-      _routePoints = [];
+      _polylines = {};
     });
 
     try {
       final points = _savedPosters.map((p) => LatLng(p.lat, p.lon)).toList();
-      final route = await _routingService.getRoute(points);
-      if(mounted){
+      final routePoints = await _routingService.getRoute(points);
+      
+      if (mounted) {
         setState(() {
-          _routePoints = route;
+            _polylines.add(Polyline(
+            polylineId: const PolylineId('route'),
+            points: routePoints.map((p) => LatLng(p.latitude, p.longitude)).toList(),
+            color: Colors.blue,
+            width: 5,
+          ));
         });
       }
     } catch (e) {
       if (!mounted) return;
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Falha ao calcular a rota: $e')),
       );
     } finally {
-      if(mounted){
+      if (mounted) {
         setState(() {
           _isRouting = false;
         });
@@ -229,40 +276,24 @@ class _MapPageState extends State<MapPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : FlutterMap(
-              options: MapOptions(
-                initialCenter: widget.center,
-                initialZoom: 14.0,
-                onLongPress: (tapPosition, point) {
-                  _showAddManualMarkerDialog(point).then((newPoster) {
+          : GoogleMap(
+              mapType: MapType.normal,
+              initialCameraPosition: CameraPosition(
+                target: widget.center,
+                zoom: 14.0,
+              ),
+              onMapCreated: (GoogleMapController controller) {
+                _controller.complete(controller);
+              },
+              markers: _markers,
+              polylines: _polylines,
+              onLongPress: (LatLng point) {
+                 _showAddManualMarkerDialog(point).then((newPoster) {
                     if (newPoster != null) {
                       _navigateToDetails(newPoster);
                     }
                   });
-                },
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.na_posters_app',
-                ),
-                if (_routePoints.isNotEmpty)
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: _routePoints,
-                        strokeWidth: 4.0,
-                        color: Colors.blue,
-                      ),
-                    ],
-                  ),
-                MarkerLayer(
-                  markers: [
-                    ..._suggestedPois.map((poi) => _buildPoiMarker(poi)),
-                    ..._savedPosters.map((poster) => _buildPosterMarker(poster)),
-                  ],
-                ),
-              ],
+              },
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: _calculateRoute,
@@ -270,36 +301,6 @@ class _MapPageState extends State<MapPage> {
         child: _isRouting
             ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
             : const Icon(Icons.route),
-      ),
-    );
-  }
-
-  Marker _buildPoiMarker(Poi poi) {
-    return Marker(
-      width: 40.0,
-      height: 40.0,
-      point: LatLng(poi.lat, poi.lon),
-      child: GestureDetector(
-        onTap: () => _showSavePoiDialog(poi),
-        child: Tooltip(
-          message: 'Sugestão: ${poi.name}\nPontuação: ${poi.score}\nToque para salvar',
-          child: Icon(Icons.add_location_outlined, color: Colors.redAccent, size: 40),
-        ),
-      ),
-    );
-  }
-
-  Marker _buildPosterMarker(Poster poster) {
-    return Marker(
-      width: 40.0,
-      height: 40.0,
-      point: LatLng(poster.lat, poster.lon),
-      child: GestureDetector(
-        onTap: () => _navigateToDetails(poster),
-        child: Tooltip(
-          message: 'Salvo: ${poster.name}\nToque para ver detalhes',
-          child: Icon(Icons.location_on, color: Theme.of(context).primaryColor, size: 40),
-        ),
       ),
     );
   }

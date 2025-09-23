@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as google_maps;
 import 'package:na_posters_app/models/group.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:na_posters_app/pages/posters_list_page.dart';
+import 'package:latlong2/latlong.dart' as latlong2;
 import 'package:na_posters_app/services/firebase_service.dart';
 import 'map_page.dart';
 
@@ -18,7 +19,7 @@ class HomePage extends StatefulWidget {
 class HomePageState extends State<HomePage> {
   double _radius = 3.0; // km
   double _maxSuggestions = 20;
-  LatLng? _currentLocation;
+  latlong2.LatLng? _currentLocation;
   bool _loadingLocation = true;
   bool _loadingGroups = true;
 
@@ -110,7 +111,7 @@ class HomePageState extends State<HomePage> {
       if (!mounted) return;
 
       setState(() {
-        _currentLocation = LatLng(position.latitude, position.longitude);
+        _currentLocation = latlong2.LatLng(position.latitude, position.longitude);
         _loadingLocation = false;
       });
     } catch (e) {
@@ -127,7 +128,7 @@ class HomePageState extends State<HomePage> {
       Navigator.of(context).push(MaterialPageRoute(
         builder: (context) => MapPage(
           group: _selectedGroup!,
-          center: _currentLocation!,
+          center: google_maps.LatLng(_currentLocation!.latitude, _currentLocation!.longitude),
           radius: _radius,
           maxSuggestions: _maxSuggestions.toInt(),
         ),

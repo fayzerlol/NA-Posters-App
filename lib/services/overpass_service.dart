@@ -9,7 +9,7 @@ class OverpassService {
 
   // Cabeçalho User-Agent para cumprir os requisitos da API
   final Map<String, String> _headers = {
-    'User-Agent': 'NAPostersApp/1.0 (https://github.com/ உங்களுடைய/repo)',
+    'User-Agent': 'NAPostersApp/1.0 (https://github.com/rennanfayzer/NA-Posters-App)',
   };
 
   // Define a pontuação para cada tipo de POI

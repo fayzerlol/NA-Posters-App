@@ -1,7 +1,8 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 
 class RoutingService {
   Future<List<LatLng>> getRoute(List<LatLng> points) async {
@@ -9,9 +10,9 @@ class RoutingService {
       return [];
     }
 
-    // Correctly format the coordinates string
     final coordinates = points.map((p) => '${p.longitude},${p.latitude}').join(';');
-    final url = 'http://router.project-osrm.org/route/v1/driving/$coordinates?overview=full&geometries=geojson';
+    // OSRM now returns a polyline encoded geometry. Update the geometries parameter
+    final url = 'http://router.project-osrm.org/route/v1/driving/$coordinates?overview=full&geometries=polyline';
 
     try {
       final response = await http.get(Uri.parse(url));
@@ -19,15 +20,14 @@ class RoutingService {
         final data = json.decode(response.body);
         final routes = data['routes'] as List;
         if (routes.isNotEmpty) {
-          final geometry = routes[0]['geometry']['coordinates'] as List;
-          return geometry.map((c) => LatLng(c[1], c[0])).toList();
+          final geometry = routes[0]['geometry'] as String;
+          final List<PointLatLng> decodedPoints = PolylinePoints.decodePolyline(geometry);
+          return decodedPoints.map((p) => LatLng(p.latitude, p.longitude)).toList();
         }
       }
     } catch (e) {
-      // It's better to rethrow the exception or handle it more gracefully
-      // For now, we'll just print it as it was.
       debugPrint('Error getting route: $e');
-      rethrow; // Rethrowing the exception is often better for debugging.
+      rethrow;
     }
 
     return [];

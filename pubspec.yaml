@@ -20,22 +20,25 @@ dependencies:
   permission_handler: any
 
   # Map & Location
-  flutter_map: any
-  latlong2: any
+  google_maps_flutter: ^2.6.1
   geolocator: any
-  flutter_map_location_marker: any
+  flutter_polyline_points: any # Para desenhar rotas
 
   # UI & Features
   image_picker: any
   signature: any
   share_plus: any
   intl: any
+  google_fonts: ^6.3.1
 
   # Firebase
   firebase_core: any
   firebase_app_check: any
   firebase_app_installations: any
   cloud_firestore: any
+  flutter_map_location_marker: ^10.1.0
+  latlong2: ^0.9.1
+  flutter_map: ^8.2.2
 
 dev_dependencies:
   flutter_test:
